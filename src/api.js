@@ -26,11 +26,13 @@ export async function loadStoreData() {
     customer: users.get(cart.userId) || `Customer ${cart.userId}`,
     items: cart.totalQuantity,
     total: cart.discountedTotal,
+    listTotal: cart.total,
     lines: cart.products.map((line) => ({
       productId: line.id,
       title: line.title,
       category: byId.get(line.id)?.category || "other",
       revenue: line.discountedTotal,
+      listRevenue: line.total,
       quantity: line.quantity,
     })),
   }));

@@ -1,27 +1,25 @@
 import useWidth from "./useWidth";
+import { STATUS } from "./Status";
+
 // Stacked bars: how many products in each category are in stock, low, or sold out.
 // Status colours always come with an icon and a word, never colour alone.
-export const STATUS = [
-  { key: "in", label: "In stock", icon: "✓", color: "var(--good)" },
-  { key: "low", label: "Low (under 10)", icon: "▲", color: "var(--warning)" },
-  { key: "out", label: "Sold out", icon: "✕", color: "var(--critical)" },
-];
+export { STATUS };
 
 export default function StockChart({ rows, onTip }) {
   const max = Math.max(...rows.map((r) => r.in + r.low + r.out), 1);
   const rowH = 30;
   const [ref, width] = useWidth();
-  const labelW = width < 480 ? 110 : 150;
+  const labelW = width < 400 ? 110 : 150;
   const plotW = width - labelW - 50;
   const gap = 2;
 
   return (
     <div ref={ref}>
-      <ul className="mb-3 flex flex-wrap gap-4 text-sm" style={{ color: "var(--ink-2)" }}>
+      <ul className="mb-4 flex flex-wrap gap-x-4 gap-y-1 text-[13px]" style={{ color: "var(--ink-2)" }}>
         {STATUS.map((s) => (
           <li key={s.key} className="flex items-center gap-1.5">
-            <span className="inline-block h-3 w-3 rounded-sm" style={{ background: s.color }} />
-            <span aria-hidden="true">{s.icon}</span> {s.label}
+            <s.icon size={15} weight="fill" style={{ color: s.color }} aria-hidden="true" />
+            {s.label}
           </li>
         ))}
       </ul>
@@ -34,7 +32,7 @@ export default function StockChart({ rows, onTip }) {
           const segs = STATUS.filter((s) => r[s.key] > 0);
           return (
             <g key={r.label}>
-              <text x={labelW - 10} y={y + rowH / 2} dominantBaseline="middle" textAnchor="end" fontSize="13" fill="var(--ink-2)">
+              <text x={labelW - 10} y={y + rowH / 2} dominantBaseline="middle" textAnchor="end" fontSize="12.5" fill="var(--ink-2)">
                 {r.label.length > (labelW < 150 ? 12 : 20) ? r.label.slice(0, labelW < 150 ? 11 : 19) + "…" : r.label}
               </text>
               {segs.map((s, j) => {
@@ -53,7 +51,7 @@ export default function StockChart({ rows, onTip }) {
                   </g>
                 );
               })}
-              <text x={x + 6} y={y + rowH / 2} dominantBaseline="middle" fontSize="12" fill="var(--ink-2)" className="tnum">{total}</text>
+              <text x={x + 6} y={y + rowH / 2} dominantBaseline="middle" fontSize="12" fill="var(--muted)" className="tnum">{total}</text>
             </g>
           );
         })}

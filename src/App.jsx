@@ -1,27 +1,37 @@
 import { useEffect, useMemo, useState } from "react";
+import { WarningCircle } from "@phosphor-icons/react";
 import { loadStoreData, money, prettyCategory, stockStatus } from "./api";
 import BarChart from "./components/BarChart";
-import ChartCard, { DataTable } from "./components/ChartCard";
+import ChartCard, { ChartSkeleton, DataTable } from "./components/ChartCard";
+import MetricStrip, { MetricStripSkeleton } from "./components/MetricStrip";
 import OrdersTable from "./components/OrdersTable";
-import StatTile from "./components/StatTile";
+import RestockList from "./components/RestockList";
+import Sidebar, { NAV } from "./components/Sidebar";
 import StockChart, { STATUS } from "./components/StockChart";
 import Tooltip from "./components/Tooltip";
+import Topbar from "./components/Topbar";
 
-const THEMES = ["system", "light", "dark"];
+const pct = (a, b) => (b ? `${((a / b) * 100).toFixed(1)}%` : "0%");
 
 export default function App() {
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [updated, setUpdated] = useState("");
   const [category, setCategory] = useState("all");
   const [tip, setTip] = useState(null);
   const [theme, setTheme] = useState("system");
+  const [navOpen, setNavOpen] = useState(false);
+  const [section, setSection] = useState("#overview");
 
   const refresh = () => {
     setLoading(true);
     setError("");
     loadStoreData()
-      .then(setData)
+      .then((d) => {
+        setData(d);
+        setUpdated(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
+      })
       .catch((e) => setError(e.message || "Could not load data"))
       .finally(() => setLoading(false));
   };
@@ -31,6 +41,21 @@ export default function App() {
     if (theme === "system") document.documentElement.removeAttribute("data-theme");
     else document.documentElement.setAttribute("data-theme", theme);
   }, [theme]);
+
+  // Highlight the sidebar item for the section in view.
+  useEffect(() => {
+    if (!data) return;
+    const els = NAV.map((n) => document.querySelector(n.href)).filter(Boolean);
+    const io = new IntersectionObserver(
+      (entries) => {
+        const visible = entries.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+        if (visible[0]) setSection(`#${visible[0].target.id}`);
+      },
+      { rootMargin: "-120px 0px -55% 0px" }
+    );
+    els.forEach((el) => io.observe(el));
+    return () => io.disconnect();
+  }, [data]);
 
   const categories = useMemo(
     () => (data ? [...new Set(data.products.map((p) => p.category))].sort() : []),
@@ -49,12 +74,14 @@ export default function App() {
           ...o,
           lines,
           total: category === "all" ? o.total : lines.reduce((s, l) => s + l.revenue, 0),
+          listTotal: category === "all" ? o.listTotal : lines.reduce((s, l) => s + (l.listRevenue ?? l.revenue), 0),
           items: lines.reduce((s, l) => s + l.quantity, 0),
         };
       })
       .filter((o) => o.lines.length > 0);
 
     const revenue = orders.reduce((s, o) => s + o.total, 0);
+    const allRevenue = data.orders.reduce((s, o) => s + o.total, 0);
     const lines = orders.flatMap((o) => o.lines);
 
     // Chart 1: revenue by category (all) or top products (one category).
@@ -76,106 +103,93 @@ export default function App() {
     }
     const stockRows = [...stockMap.values()].sort((a, b) => b.low + b.out - (a.low + a.out) || a.label.localeCompare(b.label)).slice(0, 10);
     const restock = products.filter((p) => p.stock < 10).sort((a, b) => a.stock - b.stock);
+    const soldOut = restock.filter((p) => p.stock === 0).length;
 
-    return { orders, revenue, revenueRows, stockRows, restock, productCount: products.length };
+    return { orders, revenue, allRevenue, revenueRows, stockRows, restock, soldOut, productCount: products.length };
   }, [data, category]);
 
+  const metrics = view && [
+    { label: "Revenue", value: money.format(view.revenue), note: category === "all" ? "After discounts" : `${pct(view.revenue, view.allRevenue)} of all revenue` },
+    { label: "Orders", value: view.orders.length.toLocaleString(), note: category === "all" ? "All carts" : "Containing this category" },
+    { label: "Average order", value: money.format(view.orders.length ? view.revenue / view.orders.length : 0), note: "Revenue per order" },
+    { label: "Products to restock", value: view.restock.length, note: `${view.soldOut} sold out · ${view.productCount} products` },
+  ];
+
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-      <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="text-sm font-medium" style={{ color: "var(--series-1)" }}>Store admin</p>
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Sales &amp; inventory overview</h1>
-          <p className="mt-1 text-sm" style={{ color: "var(--ink-2)" }}>
-            Live demo data from the public <a className="underline" href="https://dummyjson.com" target="_blank" rel="noreferrer">DummyJSON</a> API.
-          </p>
-        </div>
-        <div className="flex items-center gap-2 text-sm">
-          <label className="sr-only" htmlFor="theme">Theme</label>
-          <select id="theme" value={theme} onChange={(e) => setTheme(e.target.value)} className="rounded-md px-2.5 py-1.5" style={{ border: "1px solid var(--ring)", background: "var(--surface)" }}>
-            {THEMES.map((t) => <option key={t} value={t}>{t[0].toUpperCase() + t.slice(1)} theme</option>)}
-          </select>
-          <button type="button" onClick={refresh} disabled={loading} className="rounded-md px-3 py-1.5 font-medium text-white disabled:opacity-60" style={{ background: "var(--series-1)" }}>
-            {loading ? "Loading…" : "Refresh data"}
-          </button>
-        </div>
-      </header>
+    <div className="lg:grid lg:grid-cols-[15rem_1fr]">
+      <Sidebar active={section} open={navOpen} onClose={() => setNavOpen(false)} onNavigate={() => setNavOpen(false)} restockCount={view?.restock.length ?? 0} theme={theme} setTheme={setTheme} />
 
-      {/* Filter row: scopes every tile, chart and table below it. */}
-      <div className="mb-6 flex flex-wrap items-center gap-3">
-        <label htmlFor="category" className="text-sm" style={{ color: "var(--ink-2)" }}>Category</label>
-        <select id="category" value={category} onChange={(e) => setCategory(e.target.value)} disabled={!data} className="rounded-md px-3 py-1.5 text-sm" style={{ border: "1px solid var(--ring)", background: "var(--surface)" }}>
-          <option value="all">All categories</option>
-          {categories.map((c) => <option key={c} value={c}>{prettyCategory(c)}</option>)}
-        </select>
-        {category !== "all" && (
-          <button type="button" onClick={() => setCategory("all")} className="text-sm underline" style={{ color: "var(--ink-2)" }}>Clear</button>
-        )}
+      <div className="min-w-0">
+        <Topbar
+          categories={categories}
+          category={category}
+          setCategory={setCategory}
+          theme={theme}
+          setTheme={setTheme}
+          loading={loading}
+          onRefresh={refresh}
+          onMenu={() => setNavOpen(true)}
+          updated={updated}
+        />
+
+        <main className="mx-auto max-w-[1400px] space-y-5 p-4 sm:p-6">
+          {error && (
+            <div role="alert" className="panel flex flex-wrap items-center gap-3 p-4" style={{ borderColor: "var(--critical)" }}>
+              <WarningCircle size={20} weight="fill" style={{ color: "var(--critical)" }} aria-hidden="true" />
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold">Couldn't load store data</p>
+                <p className="text-[13px] text-ink-2">{error}. Check your connection and try again.</p>
+              </div>
+              <button type="button" onClick={refresh} className="btn-primary">Try again</button>
+            </div>
+          )}
+
+          {!view && !error && (
+            <div className="space-y-5" aria-busy="true" aria-label="Loading store data">
+              <MetricStripSkeleton />
+              <div className="grid gap-5 xl:grid-cols-[1.25fr_1fr]">
+                <ChartSkeleton />
+                <ChartSkeleton />
+              </div>
+            </div>
+          )}
+
+          {view && (
+            <div className={`space-y-5 transition-opacity duration-200 ${loading ? "opacity-60" : ""}`} aria-busy={loading}>
+              <MetricStrip items={metrics} />
+
+              <div className="grid gap-5 xl:grid-cols-[1.25fr_1fr]">
+                <ChartCard
+                  id="revenue"
+                  title={category === "all" ? "Revenue by category" : "Top products by revenue"}
+                  subtitle={category === "all" ? "Top 10 categories, after discounts" : prettyCategory(category)}
+                  table={<DataTable columns={[{ key: "label", label: "Name" }, { key: "value", label: "Revenue", align: "right" }, { key: "share", label: "Share", align: "right" }]} rows={view.revenueRows.map((r) => ({ label: r.label, value: money.format(r.value), share: pct(r.value, view.revenue) }))} />}
+                >
+                  {view.revenueRows.length ? (
+                    <BarChart rows={view.revenueRows} format={(v) => money.format(v)} onTip={setTip} />
+                  ) : (
+                    <p className="py-10 text-center text-ink-2">No sales in this category yet.</p>
+                  )}
+                </ChartCard>
+
+                <ChartCard
+                  id="inventory"
+                  title="Inventory health"
+                  subtitle="Products per category by stock level"
+                  table={<DataTable columns={[{ key: "label", label: "Category" }, ...STATUS.map((s) => ({ key: s.key, label: s.short, align: "right" }))]} rows={view.stockRows} />}
+                >
+                  <StockChart rows={view.stockRows} onTip={setTip} />
+                </ChartCard>
+              </div>
+
+              <div className="grid items-start gap-5 xl:grid-cols-[1.6fr_1fr]">
+                <OrdersTable orders={view.orders} />
+                <RestockList items={view.restock} />
+              </div>
+            </div>
+          )}
+        </main>
       </div>
-
-      {error && (
-        <div role="alert" className="card mb-6 p-4 text-sm" style={{ borderColor: "var(--critical)" }}>
-          <strong>✕ Couldn't load data.</strong> {error}. <button className="underline" onClick={refresh}>Try again</button>
-        </div>
-      )}
-
-      {!view && !error && <p style={{ color: "var(--ink-2)" }}>Loading store data…</p>}
-
-      {view && (
-        <div className={`space-y-6 transition-opacity ${loading ? "opacity-60" : ""}`}>
-          <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-            <StatTile label="Revenue" value={money.format(view.revenue)} note="After discounts" />
-            <StatTile label="Orders" value={view.orders.length.toLocaleString()} />
-            <StatTile label="Average order" value={money.format(view.orders.length ? view.revenue / view.orders.length : 0)} />
-            <StatTile label="Products to restock" value={view.restock.length} note={`of ${view.productCount} products`} />
-          </div>
-
-          <div className="grid gap-6 lg:grid-cols-2">
-            <ChartCard
-              title={category === "all" ? "Revenue by category" : "Top products by revenue"}
-              subtitle={category === "all" ? "Top 10 categories" : prettyCategory(category)}
-              table={<DataTable columns={[{ key: "label", label: "Name" }, { key: "value", label: "Revenue", align: "right" }]} rows={view.revenueRows.map((r) => ({ label: r.label, value: money.format(r.value) }))} />}
-            >
-              {view.revenueRows.length ? <BarChart rows={view.revenueRows} format={(v) => money.format(v)} onTip={setTip} /> : <p className="text-sm" style={{ color: "var(--muted)" }}>No sales in this category yet.</p>}
-            </ChartCard>
-
-            <ChartCard
-              title="Inventory health"
-              subtitle="Products per category by stock level"
-              table={<DataTable columns={[{ key: "label", label: "Category" }, ...STATUS.map((s) => ({ key: s.key, label: s.label, align: "right" }))]} rows={view.stockRows} />}
-            >
-              <StockChart rows={view.stockRows} onTip={setTip} />
-            </ChartCard>
-          </div>
-
-          <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
-            <OrdersTable orders={view.orders} />
-            <section className="card p-5">
-              <h2 className="text-base font-semibold">Needs restocking</h2>
-              <p className="mt-0.5 mb-4 text-sm" style={{ color: "var(--ink-2)" }}>Lowest stock first</p>
-              <ul className="max-h-96 space-y-2 overflow-auto text-sm">
-                {view.restock.map((p) => {
-                  const s = STATUS.find((x) => x.key === stockStatus(p.stock));
-                  return (
-                    <li key={p.id} className="flex items-center justify-between gap-3 py-1" style={{ borderTop: "1px solid var(--grid)" }}>
-                      <span className="truncate">{p.title}</span>
-                      <span className="flex shrink-0 items-center gap-1.5 tnum" style={{ color: "var(--ink-2)" }}>
-                        <span style={{ color: s.color }} aria-hidden="true">{s.icon}</span>
-                        {p.stock === 0 ? "Sold out" : `${p.stock} left`}
-                      </span>
-                    </li>
-                  );
-                })}
-                {view.restock.length === 0 && <li style={{ color: "var(--muted)" }}>✓ Everything is well stocked.</li>}
-              </ul>
-            </section>
-          </div>
-        </div>
-      )}
-
-      <footer className="mt-10 text-sm" style={{ color: "var(--muted)" }}>
-        Built by <a className="underline" href="https://joshua-adesomoju.vercel.app" target="_blank" rel="noreferrer">Joshua Adesomoju</a> with React and Tailwind CSS.
-      </footer>
       <Tooltip tip={tip} />
     </div>
   );

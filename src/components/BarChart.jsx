@@ -5,7 +5,7 @@ export default function BarChart({ rows, format, onTip }) {
   const max = Math.max(...rows.map((r) => r.value), 1);
   const rowH = 30;
   const [ref, width] = useWidth();
-  const labelW = width < 480 ? 110 : 150;
+  const labelW = width < 400 ? 110 : 150;
   const plotW = width - labelW - 70;
 
   return (
@@ -26,7 +26,7 @@ export default function BarChart({ rows, format, onTip }) {
             onBlur={() => onTip(null)}
           >
             <rect x={0} y={y} width={width} height={rowH} fill="transparent" />
-            <text x={labelW - 10} y={y + rowH / 2} dominantBaseline="middle" textAnchor="end" fontSize="13" fill="var(--ink-2)">
+            <text x={labelW - 10} y={y + rowH / 2} dominantBaseline="middle" textAnchor="end" fontSize="12.5" fill="var(--ink-2)">
               {r.label.length > (labelW < 150 ? 12 : 20) ? r.label.slice(0, labelW < 150 ? 11 : 19) + "…" : r.label}
             </text>
             <path
@@ -34,7 +34,7 @@ export default function BarChart({ rows, format, onTip }) {
               fill="var(--series-1)"
               className="transition-opacity group-hover:opacity-80 group-focus:opacity-80"
             />
-            <text x={labelW + w + 8} y={y + rowH / 2} dominantBaseline="middle" fontSize="12" fill="var(--ink-2)" className="tnum">
+            <text x={labelW + w + 8} y={y + rowH / 2} dominantBaseline="middle" fontSize="12" fill="var(--muted)" className="tnum">
               {format(r.value)}
             </text>
           </g>

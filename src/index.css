@@ -1,59 +1,128 @@
 @import "tailwindcss";
+@import "@fontsource-variable/geist";
 
-/* Colour roles. Light values here, dark values below. Components use these names only. */
+/*
+  Storefront Admin: calm console in the Linear/Stripe tradition.
+  Cool neutrals, one blue accent for selection and primary actions,
+  status colours only for stock state (always with icon + word).
+*/
+@theme {
+  --font-sans: "Geist Variable", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --color-page: var(--page);
+  --color-panel: var(--panel);
+  --color-rail: var(--rail);
+  --color-hover: var(--hover);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
+  --color-good: var(--good);
+  --color-warning: var(--warning);
+  --color-critical: var(--critical);
+}
+
 :root {
   color-scheme: light;
-  --page: #f9f9f7;
-  --surface: #fcfcfb;
-  --ink: #0b0b0b;
-  --ink-2: #52514e;
-  --muted: #898781;
-  --grid: #e1e0d9;
-  --axis: #c3c2b7;
-  --ring: rgba(11, 11, 11, 0.1);
+  --page: #f6f6f7;
+  --panel: #ffffff;
+  --rail: #efeff1;
+  --hover: #f1f2f4;
+  --ink: #111318;
+  --ink-2: #4c5160;
+  --muted: #6a6f7d;
+  --line: #e4e5e9;
+  --line-strong: #d3d5db;
+  --grid: #eceef1;
+  --axis: #c9ccd3;
+  --accent: #2a67d6;
+  --accent-ink: #1f55b8;
+  --accent-soft: #e8f0fc;
   --series-1: #2a78d6;
   --good: #0ca30c;
   --warning: #fab219;
   --critical: #d03b3b;
-  --good-ink: #006300;
+  --good-ink: #0b7a0b;
+  --warning-ink: #8a5a00;
+  --critical-ink: #b42f2f;
+  --shadow: 0 1px 2px rgba(17, 19, 24, 0.04), 0 2px 8px rgba(17, 19, 24, 0.04);
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --page: #0d0d0d;
-    --surface: #1a1a19;
-    --ink: #ffffff;
-    --ink-2: #c3c2b7;
-    --grid: #2c2c2a;
-    --axis: #383835;
-    --ring: rgba(255, 255, 255, 0.1);
+    --page: #0e0f12;
+    --panel: #16171b;
+    --rail: #121317;
+    --hover: #1e2025;
+    --ink: #f2f3f5;
+    --ink-2: #b7bac3;
+    --muted: #8d919c;
+    --line: #25272d;
+    --line-strong: #33363d;
+    --grid: #202227;
+    --axis: #3a3d45;
+    --accent: #4d8cf0;
+    --accent-ink: #7aa9f5;
+    --accent-soft: #1a2940;
     --series-1: #3987e5;
-    --good-ink: #0ca30c;
+    --good-ink: #3cc43c;
+    --warning-ink: #f5bd45;
+    --critical-ink: #ef6b6b;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
   }
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --page: #0d0d0d;
-  --surface: #1a1a19;
-  --ink: #ffffff;
-  --ink-2: #c3c2b7;
-  --grid: #2c2c2a;
-  --axis: #383835;
-  --ring: rgba(255, 255, 255, 0.1);
+  --page: #0e0f12;
+  --panel: #16171b;
+  --rail: #121317;
+  --hover: #1e2025;
+  --ink: #f2f3f5;
+  --ink-2: #b7bac3;
+  --muted: #8d919c;
+  --line: #25272d;
+  --line-strong: #33363d;
+  --grid: #202227;
+  --axis: #3a3d45;
+  --accent: #4d8cf0;
+  --accent-ink: #7aa9f5;
+  --accent-soft: #1a2940;
   --series-1: #3987e5;
-  --good-ink: #0ca30c;
+  --good-ink: #3cc43c;
+  --warning-ink: #f5bd45;
+  --critical-ink: #ef6b6b;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 body {
   background: var(--page);
   color: var(--ink);
-  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+  touch-action: manipulation;
 }
-.card {
-  background: var(--surface);
-  border: 1px solid var(--ring);
-  border-radius: 12px;
-  min-width: 0;
-}
+::selection { background: var(--accent-soft); color: var(--ink); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
 .tnum { font-variant-numeric: tabular-nums; }
-:focus-visible { outline: 2px solid var(--series-1); outline-offset: 2px; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow); min-width: 0; }
+* { scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; }
+
+@layer components {
+.control {
+  height: 34px; border-radius: 8px; border: 1px solid var(--line-strong); background: var(--panel);
+  padding: 0 10px; color: var(--ink); transition: border-color 150ms, background-color 150ms;
+}
+.control:hover { border-color: var(--muted); }
+.btn-primary { height: 34px; border-radius: 8px; background: var(--accent); color: #fff; padding: 0 12px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px; transition: background-color 150ms; }
+.btn-primary:hover { background: var(--accent-ink); }
+.btn-primary:disabled { opacity: .6; }
+
+}
+
+@keyframes shimmer { 0% { background-position: -300px 0; } 100% { background-position: 300px 0; } }
+.skeleton { border-radius: 6px; background: linear-gradient(90deg, var(--hover) 0, var(--line) 50%, var(--hover) 100%); background-size: 600px 100%; animation: shimmer 1.4s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .skeleton { animation: none; } }

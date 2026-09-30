@@ -6,7 +6,7 @@ export default function Tooltip({ tip }) {
     <div
       role="status"
       className="pointer-events-none fixed z-50 min-w-40 rounded-lg px-3 py-2 text-sm shadow-lg"
-      style={{ left, top: tip.y + 14, background: "var(--surface)", border: "1px solid var(--ring)" }}
+      style={{ left, top: tip.y + 14, background: "var(--panel)", border: "1px solid var(--line-strong)" }}
     >
       {tip.rows.map((r) => (
         <div key={r.label} className="flex items-center gap-2">
